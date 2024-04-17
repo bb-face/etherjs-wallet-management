@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSetRecoilState } from "recoil";
 import { ethers } from "ethers";
 
@@ -10,6 +10,47 @@ function useConnectWallet() {
   const setWalletAddress = useSetRecoilState(walletAddressAtom);
 
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleAccountsChanged = (accounts) => {
+    console.log("-- account is changing");
+    const newAddress = accounts.length > 0 ? accounts[0] : null;
+    setWalletAddress(newAddress);
+  };
+
+  const handleChainChanged = (chainId) => {
+    console.log("-- network is changing");
+    setProviderNetwork(chainId);
+  };
+
+  useEffect(() => {
+    let didMount = false;
+
+    const attachEventListeners = () => {
+      if (typeof window.ethereum !== "undefined") {
+        window.ethereum.on("accountsChanged", handleAccountsChanged);
+        window.ethereum.on("chainChanged", handleChainChanged);
+      }
+    };
+
+    const removeEventListeners = () => {
+      if (typeof window.ethereum !== "undefined") {
+        window.ethereum.removeListener(
+          "accountsChanged",
+          handleAccountsChanged
+        );
+        window.ethereum.removeListener("chainChanged", handleChainChanged);
+      }
+    };
+
+    if (!didMount) {
+      attachEventListeners();
+      didMount = true;
+    }
+
+    return () => {
+      removeEventListeners();
+    };
+  }, []);
 
   const connectWallet = async () => {
     setIsLoading(true);
